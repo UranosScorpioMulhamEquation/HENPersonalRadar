@@ -2,15 +2,14 @@ import flet as ft
 from datetime import date
 
 def main(page: ft.Page):
-    # إعدادات الواجهة
     page.title = "HENRadar"
-    page.padding = 20
+    page.theme_mode = ft.ThemeMode.LIGHT
     
-    # رسالة تعريفية
-    status_text = ft.Text("Enter your Birth Date to start Analysis", size=16)
+    # رسالة للتحقق
+    status_text = ft.Text("Press the button to pick a date:", size=16)
     results_col = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True)
 
-    # معادلة الرادار (بدون أي تعديل)
+    # دالة الحساب (تبقى كما هي)
     def run_engine(birth_date):
         homo_k, eris_k, neptune_k, tolerance = 6.18, 9.3, 10.77, 0.3
         data = []
@@ -28,25 +27,27 @@ def main(page: ft.Page):
             data.append({"date": f"{y}-{m:02d}-{d:02d}", "status": status})
         return data
 
-    # منطق العرض
-    def show_results(e):
+    # دالة تظهر عند اختيار التاريخ
+    def date_picked(e):
         if date_picker.value:
+            status_text.value = f"Selected: {date_picker.value.strftime('%Y-%m-%d')}"
             res = run_engine(date_picker.value)
             results_col.controls.clear()
             for r in res:
-                results_col.controls.append(
-                    ft.Text(f"Date: {r['date']} - {r['status']}", 
-                            color=ft.colors.RED if r['status'] == "CRITICAL" else ft.colors.GREEN)
-                )
+                color = ft.colors.RED_500 if r['status'] == "CRITICAL" else ft.colors.GREEN_700
+                results_col.controls.append(ft.Text(f"{r['date']} -> {r['status']}", color=color))
             page.update()
 
-    date_picker = ft.DatePicker(on_change=lambda e: show_results(e))
+    # إنشاء الـ DatePicker وإضافته للـ Overlay بشكل صحيح
+    date_picker = ft.DatePicker(on_change=date_picked, first_date=date(1900, 1, 1), last_date=date(2099, 12, 31))
     page.overlay.append(date_picker)
     
+    # الزر الذي يفتح النافذة
     page.add(
-        ft.ElevatedButton("Select Birth Date", on_click=lambda _: date_picker.pick_date()),
+        ft.ElevatedButton("Select Birth Date", icon=ft.icons.CALENDAR_MONTH, on_click=lambda _: date_picker.pick_date()),
         status_text,
         results_col
     )
+    page.update()
 
 ft.app(target=main)
