@@ -2,68 +2,51 @@ import flet as ft
 from datetime import date
 
 def main(page: ft.Page):
-    page.title = "Neptune-Haumea-Eris Radar"
-    page.theme_mode = ft.ThemeMode.LIGHT
-    page.scroll = ft.ScrollMode.AUTO
-
-    def run_usm_engine(birth_date):
-        homo_k, eris_k, neptune_k, tolerance = 6.18, 9.3, 10.77, 0.3
-        results = []
-        
-        for i in range(1, 85):
-            homo_dev = abs((i / homo_k) - round(i / homo_k))
-            eris_dev = abs((i / eris_k) - round(i / eris_k))
-            neptune_dev = abs((i / neptune_k) - round(i / neptune_k))
-            
-            status = "CRITICAL" if (homo_dev <= tolerance and eris_dev <= tolerance and neptune_dev <= tolerance) else "Normal"
-            
-            offset_day = int(eris_dev * 30)
-            offset_month = int(homo_dev * 12)
-            
-            new_day = birth_date.day + offset_day
-            new_month = birth_date.month + offset_month
-            new_year = birth_date.year + i
-            
-            while new_day > 30:
-                new_day -= 30
-                new_month += 1
-            while new_month > 12:
-                new_month -= 12
-                new_year += 1
-            
-            results.append({
-                "date": f"{new_year}-{new_month:02d}-{new_day:02d}",
-                "age": i,
-                "status": status
-            })
-        return results
-
-    # UI Elements
-    date_picker = ft.DatePicker(first_date=date(1900, 1, 1), last_date=date(2099, 12, 31))
-    page.overlay.append(date_picker)
+    # إعدادات الواجهة
+    page.title = "HENRadar"
+    page.padding = 20
     
-    date_button = ft.ElevatedButton("Select Birth Date", icon=ft.icons.CALENDAR_MONTH, on_click=lambda _: date_picker.pick_date())
-    result_column = ft.Column()
+    # رسالة تعريفية
+    status_text = ft.Text("Enter your Birth Date to start Analysis", size=16)
+    results_col = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True)
 
-    def execute_analysis(e):
+    # معادلة الرادار (بدون أي تعديل)
+    def run_engine(birth_date):
+        homo_k, eris_k, neptune_k, tolerance = 6.18, 9.3, 10.77, 0.3
+        data = []
+        for i in range(1, 85):
+            h = abs((i/homo_k)-round(i/homo_k))
+            e = abs((i/eris_k)-round(i/eris_k))
+            n = abs((i/neptune_k)-round(i/neptune_k))
+            status = "CRITICAL" if (h <= tolerance and e <= tolerance and n <= tolerance) else "Normal"
+            
+            d = birth_date.day + int(e * 30)
+            m = birth_date.month + int(h * 12)
+            y = birth_date.year + i
+            while d > 30: d -= 30; m += 1
+            while m > 12: m -= 12; y += 1
+            data.append({"date": f"{y}-{m:02d}-{d:02d}", "status": status})
+        return data
+
+    # منطق العرض
+    def show_results(e):
         if date_picker.value:
-            data = run_usm_engine(date_picker.value)
-            result_column.controls.clear()
-            for row in data:
-                color = ft.colors.RED_400 if row["status"] == "CRITICAL" else ft.colors.GREEN_400
-                result_column.controls.append(
-                    ft.Container(
-                        ft.Text(f"Year {row['age']}: {row['date']} -> {row['status']}", color="white"),
-                        bgcolor=color, padding=10, border_radius=5, margin=2
-                    )
+            res = run_engine(date_picker.value)
+            results_col.controls.clear()
+            for r in res:
+                results_col.controls.append(
+                    ft.Text(f"Date: {r['date']} - {r['status']}", 
+                            color=ft.colors.RED if r['status'] == "CRITICAL" else ft.colors.GREEN)
                 )
             page.update()
 
+    date_picker = ft.DatePicker(on_change=lambda e: show_results(e))
+    page.overlay.append(date_picker)
+    
     page.add(
-        ft.Text("Neptune-Haumea-Eris Radar", size=20, weight="bold"),
-        date_button,
-        ft.ElevatedButton("Execute Analysis", on_click=execute_analysis),
-        result_column
+        ft.ElevatedButton("Select Birth Date", on_click=lambda _: date_picker.pick_date()),
+        status_text,
+        results_col
     )
 
 ft.app(target=main)
