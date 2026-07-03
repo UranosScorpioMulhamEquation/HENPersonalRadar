@@ -11,35 +11,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. جلب الكود من مستودع الـ GitHub
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. إعداد بيئة جافا (ضرورية لبناء حزم الأندرويد)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # 3. إعداد بيئة لغة بايثون
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # 4. تثبيت مكتبة فليت والاعتماديات المدرجة
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 5. بناء تطبيق الـ APK وتخطي الأسئلة التفاعلية (هنا تم تصحيح المسافات)
       - name: Build Android APK
         run: |
           flet build apk --yes
 
-      # 6. رفع ملف الـ APK الناتج كـ Artifact
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
