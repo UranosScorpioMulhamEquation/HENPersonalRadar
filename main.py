@@ -1,20 +1,30 @@
 import flet as ft
 import uuid
+import os
 import traceback
 from datetime import date
+
+# تحديد مجلد التطبيق الآمن في أندرويد لضمان صلاحيات الكتابة والقراءة
+APP_DIR = os.path.dirname(__file__) if '__file__' in globals() else os.getcwd()
+KEY_FILE = os.path.join(APP_DIR, "license.key")
+ID_FILE = os.path.join(APP_DIR, "device_id.txt")
 
 def main(page: ft.Page):
     try:
         page.title = "HENRadar"
         page.padding = 20
 
-        # ==================== 1. Security ====================
+        # ==================== 1. Security (Android File System Fallback) ====================
         def get_device_id():
-            if page.client_storage.contains_key("device_id"):
-                return page.client_storage.get("device_id")
+            # التحقق من وجود ملف يحتوي على معرف الجهاز
+            if os.path.exists(ID_FILE):
+                with open(ID_FILE, "r") as f:
+                    return f.read().strip()
             else:
+                # توليد معرف جديد وحفظه في ملف داخل المجلد الآمن
                 new_id = uuid.uuid4().hex[:8].upper()
-                page.client_storage.set("device_id", new_id)
+                with open(ID_FILE, "w") as f:
+                    f.write(new_id)
                 return new_id
 
         def generate_password(mid):
@@ -73,7 +83,8 @@ def main(page: ft.Page):
             page.update()
 
         # ==================== 3. Authentication Flow ====================
-        if page.client_storage.get("is_activated"):
+        # التحقق من وجود ملف التفعيل بدلاً من استخدام الذاكرة الداخلية
+        if os.path.exists(KEY_FILE):
             load_main_app()
         else:
             mid = get_device_id()
@@ -81,7 +92,9 @@ def main(page: ft.Page):
             def on_activate(e):
                 pwd = activation_input.value
                 if pwd == generate_password(mid):
-                    page.client_storage.set("is_activated", True)
+                    # حفظ التفعيل في ملف ضمن المجلد المسموح للأندرويد
+                    with open(KEY_FILE, "w") as f:
+                        f.write(pwd)
                     load_main_app() 
                 else:
                     error_msg.value = "Invalid Activation Key."
@@ -106,7 +119,6 @@ def main(page: ft.Page):
             page.update()
 
     except Exception as e:
-        # هذه الجزئية ستلتقط أي خطأ يسبب الشاشة البيضاء وتعرضه لك كنص
         err_msg = traceback.format_exc()
         page.controls.clear()
         page.add(ft.Text("حدث خطأ يمنع تشغيل التطبيق:", weight="bold"))
